@@ -1,0 +1,85 @@
+{% extends "tracker/base.html" %}
+{% block title %}Add Expense · {{ group.name }}{% endblock %}
+{% block content %}
+    <div class="card p-4 shadow-sm" style="max-width:700px; margin:auto;">
+        <h4 class="mb-3">{% if is_edit %}Edit Expense{% else %}Add Expense{% endif %}</h4>
+        <div class="text-muted mb-3">Group: <span class="fw-semibold">{{ group.name }}</span></div>
+
+        <form method="POST" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Description</label>
+                    {{ form.description }}
+                    {% for err in form.description.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Amount</label>
+                    {{ form.amount }}
+                    {% for err in form.amount.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date</label>
+                    {{ form.date }}
+                    {% for err in form.date.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Category</label>
+                    {{ form.category }}
+                    {% for err in form.category.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Paid by</label>
+                    {{ form.payer }}
+                    {% for err in form.payer.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Split type</label>
+                    {{ form.split_type }}
+                    {% for err in form.split_type.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <h6 class="mb-2">Splits</h6>
+            <div class="text-muted small mb-3">
+                Equal splits need no extra input. For Exact/Percent, fill values for every member.
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Member</th>
+                            <th style="width:180px;">Exact amount</th>
+                            <th style="width:180px;">Percent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in members %}
+                            <tr>
+                                <td>{{ m.username }}</td>
+                                <td>
+                                    <input class="form-control form-control-sm" name="split_exact_{{ m.id }}" placeholder="0.00">
+                                </td>
+                                <td>
+                                    <input class="form-control form-control-sm" name="split_percent_{{ m.id }}" placeholder="0.00">
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn btn-primary w-100 mt-2">Save Expense</button>
+        </form>
+
+        <a href="{% url 'group_dashboard' group.id %}" class="btn btn-link mt-2">← Back</a>
+    </div>
+{% endblock %}
+

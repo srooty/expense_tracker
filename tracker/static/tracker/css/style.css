@@ -1,0 +1,103 @@
+body {
+    background: #f3f4f6;
+    color: #1f2937;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.tracker-navbar {
+    background: #ffffff;
+}
+
+.text-primary-brand {
+    color: #4f46e5;
+}
+
+.page-title {
+    color: #4f46e5;
+    font-weight: 700;
+}
+
+.tracker-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+    border: 1px solid #eef1f5;
+    padding: 1.25rem;
+}
+
+.stat-card h6 {
+    color: #475569;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.dashboard-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.chart-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.chart-wrap-medium {
+    height: 320px;
+}
+
+.chart-wrap-large {
+    height: 340px;
+}
+
+.form-control,
+.form-select,
+textarea,
+input,
+select {
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+}
+
+.form-control:focus,
+.form-select:focus,
+textarea:focus,
+input:focus,
+select:focus {
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.15);
+}
+
+.btn {
+    border-radius: 10px;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: #4f46e5;
+    border-color: #4f46e5;
+}
+
+.btn-primary:hover {
+    background: #4338ca;
+    border-color: #4338ca;
+    transform: translateY(-1px);
+}
+
+.table thead th {
+    color: #64748b;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .chart-wrap-medium,
+    .chart-wrap-large {
+        height: 260px;
+    }
+}

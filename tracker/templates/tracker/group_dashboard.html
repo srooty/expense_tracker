@@ -1,0 +1,171 @@
+{% extends "tracker/base.html" %}
+{% load static %}
+{% block title %}{{ group.name }}{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<section class="dashboard-header">
+    <div>
+        <a class="btn btn-link px-0 text-decoration-none" href="{% url 'groups_list' %}">
+            <i class="fa-solid fa-arrow-left me-1"></i>All groups
+        </a>
+        <h2 class="page-title mb-0">{{ group.name }} Dashboard</h2>
+    </div>
+    <div class="dashboard-actions">
+        <a href="{% url 'expense_create' group.id %}" class="btn btn-primary">
+            <i class="fa-solid fa-plus me-2"></i>Add Expense
+        </a>
+        <a href="{% url 'settle_create' group.id %}" class="btn btn-outline-primary">Settle up</a>
+        <a href="{% url 'leave_group' group.id %}" class="btn btn-outline-danger">Leave</a>
+    </div>
+</section>
+
+<div class="row g-3 mt-1">
+    <div class="col-md-4">
+        <div class="tracker-card stat-card">
+            <h6 class="mb-1"><i class="fa-solid fa-users me-2"></i>Members</h6>
+            <div class="text-muted">{{ group.members.count }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="tracker-card stat-card">
+            <h6 class="mb-1"><i class="fa-solid fa-wallet me-2"></i>Total Spend</h6>
+            <div class="text-muted">Rs {{ total_spend|floatformat:2 }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="tracker-card stat-card">
+            <h6 class="mb-1"><i class="fa-solid fa-chart-line me-2"></i>Recent Expenses</h6>
+            <div class="text-muted">{{ expenses|length }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4 g-3">
+    {% if has_expense_data %}
+    <div class="col-lg-6">
+        <div class="tracker-card">
+            <h5><i class="fa-solid fa-chart-pie me-2"></i>Category Distribution</h5>
+            <div class="chart-wrap chart-wrap-medium">
+                <canvas id="categoryPieChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="tracker-card">
+            <h5><i class="fa-solid fa-chart-column me-2"></i>Monthly Expenses</h5>
+            <div class="chart-wrap chart-wrap-medium">
+                <canvas id="monthlyBarChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="tracker-card">
+            <h5><i class="fa-solid fa-chart-line me-2"></i>Expense Trend</h5>
+            <div class="chart-wrap chart-wrap-large">
+                <canvas id="trendLineChart"></canvas>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="tracker-card text-center py-5">
+            <h5 class="mb-2">No expenses yet</h5>
+            <p class="text-muted mb-3">Add your first expense to see live analytics charts.</p>
+            <a href="{% url 'expense_create' group.id %}" class="btn btn-primary">
+                <i class="fa-solid fa-plus me-2"></i>Add Expense
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row mt-4 g-3">
+    <div class="col-lg-6">
+        <div class="tracker-card">
+            <h5>Recent Transactions</h5>
+            <div class="table-responsive mt-2">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Payer</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for e in expenses %}
+                            <tr>
+                                <td class="fw-semibold">{{ e.description }}</td>
+                                <td>{{ e.payer.username }}</td>
+                                <td>{{ e.date }}</td>
+                                <td>Rs {{ e.amount }}</td>
+                                <td class="text-end">
+                                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'expense_edit' group.id e.id %}">Edit</a>
+                                    <a class="btn btn-sm btn-outline-danger" href="{% url 'expense_delete' group.id e.id %}">Delete</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="5" class="text-muted">No expenses yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="tracker-card mb-3">
+            <h5>Balances</h5>
+            {% for user, amount in balances.items %}
+                <div class="d-flex justify-content-between py-1">
+                    <div>{{ user }}</div>
+                    {% if amount > 0 %}
+                        <div class="text-success fw-semibold">+Rs {{ amount }}</div>
+                    {% elif amount < 0 %}
+                        <div class="text-danger fw-semibold">Rs {{ amount }}</div>
+                    {% else %}
+                        <div class="text-muted">Rs 0.00</div>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <div class="text-muted">No balances yet.</div>
+            {% endfor %}
+        </div>
+        <div class="tracker-card">
+            <h5>Settlements</h5>
+            <ul class="list-group list-group-flush mt-2">
+                {% for s in settlements %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <div class="fw-semibold">{{ s.payer.username }} -> {{ s.receiver.username }}</div>
+                            <div class="text-muted small">{{ s.date }}</div>
+                        </div>
+                        <span class="fw-semibold">Rs {{ s.amount }}</span>
+                    </li>
+                {% empty %}
+                    <li class="list-group-item px-0">No settlements yet.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.dashboardChartData = {
+    labels: {{ labels|safe }},
+    values: {{ values|safe }},
+    monthLabels: {{ month_labels|safe }},
+    monthValues: {{ month_values|safe }},
+    trendLabels: {{ trend_labels|safe }},
+    trendValues: {{ trend_values|safe }},
+    totalSpend: {{ total_spend }}
+};
+</script>
+<script src="{% static 'tracker/js/dashboard.js' %}"></script>
+{% endblock %}
+

@@ -1,0 +1,37 @@
+{% extends "tracker/base.html" %}
+{% block title %}Create Group{% endblock %}
+{% block content %}
+    <div class="card p-4 shadow-sm" style="max-width:600px; margin:auto;">
+        <h4 class="mb-3">Create Group</h4>
+
+        <form method="POST" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label class="form-label">Group name</label>
+                {{ form.name }}
+                {% for err in form.name.errors %}
+                    <div class="text-danger small">{{ err }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Members</label>
+                <div class="border rounded p-2 bg-white">
+                    {{ form.members }}
+                </div>
+                {% for err in form.members.errors %}
+                    <div class="text-danger small">{{ err }}</div>
+                {% endfor %}
+            </div>
+
+            <button class="btn btn-primary w-100">Create Group</button>
+        </form>
+
+        <a href="{% url 'groups_list' %}" class="btn btn-link mt-2">← Back</a>
+    </div>
+{% endblock %}
+
