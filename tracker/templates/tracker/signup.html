@@ -1,14 +1,16 @@
 {% extends "tracker/base.html" %}
 {% block title %}Signup{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-center align-items-center" style="min-height:70vh;">
-    <div class="card p-4 shadow" style="width:380px; border-radius:15px;">
-        <h3 class="text-center mb-3 text-success">Signup</h3>
+<div class="auth-shell">
+    <div class="auth-card">
+        <div class="auth-icon auth-icon-success"><i class="fa-solid fa-user-plus"></i></div>
+        <h3 class="text-center mb-2">Create your account</h3>
+        <p class="text-center text-muted mb-4">Start tracking shared expenses with clean charts and group balances.</p>
 
         <form method="POST">
             {% csrf_token %}
 
-            <input class="form-control mb-3" name="username" placeholder="Username" required>
+            <input class="form-control mb-3" name="username" placeholder="Username" value="{{ entered_username|default:'' }}" required>
 
             <input class="form-control mb-3" type="password" name="password" placeholder="Password" required>
 

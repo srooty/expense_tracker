@@ -1,9 +1,14 @@
 {% extends "tracker/base.html" %}
 {% block title %}Settle up · {{ group.name }}{% endblock %}
 {% block content %}
-    <div class="card p-4 shadow-sm" style="max-width:600px; margin:auto;">
-        <h4 class="mb-3">Settle up</h4>
-        <div class="text-muted mb-3">Group: <span class="fw-semibold">{{ group.name }}</span></div>
+    <div class="tracker-card form-shell form-shell-wide">
+        <div class="form-header">
+            <div class="form-badge"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+            <div>
+                <h4 class="mb-1">Settle Up</h4>
+                <p class="text-muted mb-0">Record a payment between members in <span class="fw-semibold">{{ group.name }}</span>.</p>
+            </div>
+        </div>
 
         <form method="POST" novalidate>
             {% csrf_token %}
@@ -29,10 +34,10 @@
                 {% for err in form.date.errors %}<div class="text-danger small">{{ err }}</div>{% endfor %}
             </div>
 
-            <button class="btn btn-primary w-100">Record Settlement</button>
+            <div class="d-flex gap-2 flex-wrap mt-4">
+                <button class="btn btn-primary flex-grow-1">Record Settlement</button>
+                <a href="{% url 'group_dashboard' group.id %}" class="btn btn-outline-secondary flex-grow-1">Back to Dashboard</a>
+            </div>
         </form>
-
-        <a href="{% url 'group_dashboard' group.id %}" class="btn btn-link mt-2">← Back</a>
     </div>
 {% endblock %}
-

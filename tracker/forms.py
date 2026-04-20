@@ -22,11 +22,21 @@ class GroupForm(forms.ModelForm):
     def __init__(self, *, request_user: User, **kwargs):
         super().__init__(**kwargs)
         self.fields["members"].queryset = User.objects.exclude(id=request_user.id).order_by("username")
+        self.fields["name"].widget.attrs.update(
+            {"class": "form-control", "placeholder": "Weekend trip, Flatmates, Office team"}
+        )
+
+    def clean_name(self):
+        name = (self.cleaned_data.get("name") or "").strip()
+        if not name:
+            raise forms.ValidationError("Please enter a group name.")
+        return name
 
 
 class ExpenseForm(forms.ModelForm):
     def __init__(self, *args, group: Group | None = None, request_user: User | None = None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.group = group
         self.fields["category"].queryset = Category.objects.order_by("name")
         if group is not None:
             self.fields["payer"].queryset = group.members.all().order_by("username")
@@ -34,6 +44,16 @@ class ExpenseForm(forms.ModelForm):
             self.fields["payer"].queryset = User.objects.none()
         if request_user is not None and not self.instance.pk:
             self.fields["payer"].initial = request_user.id
+        self.fields["description"].widget.attrs.update(
+            {"class": "form-control", "placeholder": "Dinner, groceries, cab ride"}
+        )
+        self.fields["amount"].widget.attrs.update(
+            {"class": "form-control", "placeholder": "0.00", "min": "0.01", "step": "0.01"}
+        )
+        self.fields["date"].widget.attrs.update({"class": "form-control"})
+        self.fields["category"].widget.attrs.update({"class": "form-select"})
+        self.fields["payer"].widget.attrs.update({"class": "form-select"})
+        self.fields["split_type"].widget.attrs.update({"class": "form-select"})
 
     class Meta:
         model = Expense
@@ -41,6 +61,25 @@ class ExpenseForm(forms.ModelForm):
         widgets = {
             "date": forms.DateInput(attrs={"type": "date"}),
         }
+
+    def clean_description(self):
+        description = (self.cleaned_data.get("description") or "").strip()
+        if not description:
+            raise forms.ValidationError("Please enter a description.")
+        return description
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get("amount")
+        if amount is None or amount <= Decimal("0.00"):
+            raise forms.ValidationError("Amount must be greater than 0.")
+        return amount
+
+    def clean(self):
+        cleaned_data = super().clean()
+        payer = cleaned_data.get("payer")
+        if self.group is not None and payer and not self.group.members.filter(id=payer.id).exists():
+            self.add_error("payer", "Selected payer must be a member of this group.")
+        return cleaned_data
 
 
 class SettlementForm(forms.ModelForm):
@@ -56,6 +95,17 @@ class SettlementForm(forms.ModelForm):
         self.group = group
         self.payer = payer
         self.fields["receiver"].queryset = group.members.exclude(id=payer.id).order_by("username")
+        self.fields["receiver"].widget.attrs.update({"class": "form-select"})
+        self.fields["amount"].widget.attrs.update(
+            {"class": "form-control", "placeholder": "0.00", "min": "0.01", "step": "0.01"}
+        )
+        self.fields["date"].widget.attrs.update({"class": "form-control"})
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get("amount")
+        if amount is None or amount <= Decimal("0.00"):
+            raise forms.ValidationError("Settlement amount must be greater than 0.")
+        return amount
 
     def save(self, commit=True):
         obj: Settlement = super().save(commit=False)
@@ -149,4 +199,3 @@ def build_splits_for_expense(*, expense: Expense, members, split_type: str, post
         return split_objs
 
     raise forms.ValidationError("Unknown split type.")
-

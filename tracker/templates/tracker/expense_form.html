@@ -1,9 +1,14 @@
 {% extends "tracker/base.html" %}
 {% block title %}Add Expense · {{ group.name }}{% endblock %}
 {% block content %}
-    <div class="card p-4 shadow-sm" style="max-width:700px; margin:auto;">
-        <h4 class="mb-3">{% if is_edit %}Edit Expense{% else %}Add Expense{% endif %}</h4>
-        <div class="text-muted mb-3">Group: <span class="fw-semibold">{{ group.name }}</span></div>
+    <div class="tracker-card form-shell form-shell-xl">
+        <div class="form-header">
+            <div class="form-badge"><i class="fa-solid fa-receipt"></i></div>
+            <div>
+                <h4 class="mb-1">{% if is_edit %}Edit Expense{% else %}Add Expense{% endif %}</h4>
+                <p class="text-muted mb-0">Group: <span class="fw-semibold">{{ group.name }}</span></p>
+            </div>
+        </div>
 
         <form method="POST" novalidate>
             {% csrf_token %}
@@ -46,13 +51,16 @@
 
             <hr class="my-4">
 
-            <h6 class="mb-2">Splits</h6>
-            <div class="text-muted small mb-3">
-                Equal splits need no extra input. For Exact/Percent, fill values for every member.
+            <div class="split-guide mb-3">
+                <div>
+                    <h6 class="mb-1">Split Details</h6>
+                    <p class="text-muted small mb-0">Equal splits need no extra input. For Exact or Percent, fill values for every member.</p>
+                </div>
+                <div class="split-guide-chip">Equal split supported automatically</div>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-sm align-middle">
+            <div class="table-responsive split-table-wrap">
+                <table class="table table-sm align-middle split-table">
                     <thead>
                         <tr>
                             <th>Member</th>
@@ -61,14 +69,24 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for m in members %}
+                        {% for row in split_rows %}
                             <tr>
-                                <td>{{ m.username }}</td>
+                                <td class="fw-semibold">{{ row.member.username }}</td>
                                 <td>
-                                    <input class="form-control form-control-sm" name="split_exact_{{ m.id }}" placeholder="0.00">
+                                    <input
+                                        class="form-control form-control-sm"
+                                        name="{{ row.exact_name }}"
+                                        value="{{ row.exact_value }}"
+                                        placeholder="0.00"
+                                    >
                                 </td>
                                 <td>
-                                    <input class="form-control form-control-sm" name="split_percent_{{ m.id }}" placeholder="0.00">
+                                    <input
+                                        class="form-control form-control-sm"
+                                        name="{{ row.percent_name }}"
+                                        value="{{ row.percent_value }}"
+                                        placeholder="0.00"
+                                    >
                                 </td>
                             </tr>
                         {% endfor %}
@@ -76,10 +94,10 @@
                 </table>
             </div>
 
-            <button class="btn btn-primary w-100 mt-2">Save Expense</button>
+            <div class="d-flex gap-2 flex-wrap mt-4">
+                <button class="btn btn-primary flex-grow-1">{% if is_edit %}Update Expense{% else %}Save Expense{% endif %}</button>
+                <a href="{% url 'group_dashboard' group.id %}" class="btn btn-outline-secondary flex-grow-1">Back to Dashboard</a>
+            </div>
         </form>
-
-        <a href="{% url 'group_dashboard' group.id %}" class="btn btn-link mt-2">← Back</a>
     </div>
 {% endblock %}
-

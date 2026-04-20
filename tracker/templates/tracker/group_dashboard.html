@@ -25,7 +25,7 @@
     <div class="col-md-4">
         <div class="tracker-card stat-card">
             <h6 class="mb-1"><i class="fa-solid fa-users me-2"></i>Members</h6>
-            <div class="text-muted">{{ group.members.count }}</div>
+            <div class="text-muted">{{ member_count }}</div>
         </div>
     </div>
     <div class="col-md-4">
@@ -43,36 +43,56 @@
 </div>
 
 <div class="row mt-4 g-3">
-    {% if has_expense_data %}
     <div class="col-lg-6">
         <div class="tracker-card">
             <h5><i class="fa-solid fa-chart-pie me-2"></i>Category Distribution</h5>
+            {% if has_category_data %}
             <div class="chart-wrap chart-wrap-medium">
                 <canvas id="categoryPieChart"></canvas>
             </div>
+            {% else %}
+            <div class="chart-empty-state">
+                <i class="fa-regular fa-chart-pie"></i>
+                <p class="mb-0">No data available for category distribution yet.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
     <div class="col-lg-6">
         <div class="tracker-card">
             <h5><i class="fa-solid fa-chart-column me-2"></i>Monthly Expenses</h5>
+            {% if has_monthly_data %}
             <div class="chart-wrap chart-wrap-medium">
                 <canvas id="monthlyBarChart"></canvas>
             </div>
+            {% else %}
+            <div class="chart-empty-state">
+                <i class="fa-regular fa-calendar"></i>
+                <p class="mb-0">No monthly totals to chart yet.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
     <div class="col-12">
         <div class="tracker-card">
             <h5><i class="fa-solid fa-chart-line me-2"></i>Expense Trend</h5>
+            {% if has_trend_data %}
             <div class="chart-wrap chart-wrap-large">
                 <canvas id="trendLineChart"></canvas>
             </div>
+            {% else %}
+            <div class="chart-empty-state chart-empty-state-wide">
+                <i class="fa-regular fa-chart-line"></i>
+                <p class="mb-0">No trend data available yet.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
-    {% else %}
+    {% if not has_expense_data %}
     <div class="col-12">
-        <div class="tracker-card text-center py-5">
+        <div class="tracker-card text-center py-4">
             <h5 class="mb-2">No expenses yet</h5>
-            <p class="text-muted mb-3">Add your first expense to see live analytics charts.</p>
+            <p class="text-muted mb-3">Add your first expense to unlock category, monthly, and trend charts.</p>
             <a href="{% url 'expense_create' group.id %}" class="btn btn-primary">
                 <i class="fa-solid fa-plus me-2"></i>Add Expense
             </a>
@@ -119,13 +139,13 @@
     <div class="col-lg-6">
         <div class="tracker-card mb-3">
             <h5>Balances</h5>
-            {% for user, amount in balances.items %}
+            {% for entry in balance_rows %}
                 <div class="d-flex justify-content-between py-1">
-                    <div>{{ user }}</div>
-                    {% if amount > 0 %}
-                        <div class="text-success fw-semibold">+Rs {{ amount }}</div>
-                    {% elif amount < 0 %}
-                        <div class="text-danger fw-semibold">Rs {{ amount }}</div>
+                    <div>{{ entry.username }}</div>
+                    {% if entry.amount > 0 %}
+                        <div class="text-success fw-semibold">+Rs {{ entry.amount }}</div>
+                    {% elif entry.amount < 0 %}
+                        <div class="text-danger fw-semibold">Rs {{ entry.amount }}</div>
                     {% else %}
                         <div class="text-muted">Rs 0.00</div>
                     {% endif %}
@@ -163,9 +183,8 @@ window.dashboardChartData = {
     monthValues: {{ month_values|safe }},
     trendLabels: {{ trend_labels|safe }},
     trendValues: {{ trend_values|safe }},
-    totalSpend: {{ total_spend }}
+    totalSpend: {{ total_spend|default:0 }}
 };
 </script>
 <script src="{% static 'tracker/js/dashboard.js' %}"></script>
 {% endblock %}
-

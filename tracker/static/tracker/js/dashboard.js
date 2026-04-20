@@ -1,6 +1,16 @@
 (function () {
-    const chartData = window.dashboardChartData;
-    if (!chartData || typeof Chart === "undefined") {
+    const chartData = window.dashboardChartData || {
+        labels: [],
+        values: [],
+        monthLabels: [],
+        monthValues: [],
+        trendLabels: [],
+        trendValues: [],
+        totalSpend: 0,
+    };
+
+    if (typeof Chart === "undefined") {
+        console.warn("Chart.js failed to load.");
         return;
     }
 
@@ -47,7 +57,7 @@
     };
 
     const pieCanvas = document.getElementById("categoryPieChart");
-    if (pieCanvas && chartData.values.length) {
+    if (pieCanvas && Array.isArray(chartData.values) && chartData.values.length) {
         new Chart(pieCanvas, {
             type: "doughnut",
             data: {
@@ -71,7 +81,7 @@
     }
 
     const barCanvas = document.getElementById("monthlyBarChart");
-    if (barCanvas && chartData.monthValues.length) {
+    if (barCanvas && Array.isArray(chartData.monthValues) && chartData.monthValues.length) {
         new Chart(barCanvas, {
             type: "bar",
             data: {
@@ -95,7 +105,7 @@
     }
 
     const lineCanvas = document.getElementById("trendLineChart");
-    if (lineCanvas && chartData.trendValues.length) {
+    if (lineCanvas && Array.isArray(chartData.trendValues) && chartData.trendValues.length) {
         new Chart(lineCanvas, {
             type: "line",
             data: {
