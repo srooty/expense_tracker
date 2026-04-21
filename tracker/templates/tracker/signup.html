@@ -10,7 +10,8 @@
         <form method="POST">
             {% csrf_token %}
 
-            <input class="form-control mb-3" name="username" placeholder="Username" value="{{ entered_username|default:'' }}" required>
+            <input class="form-control mb-2" name="username" placeholder="Full name" value="{{ entered_username|default:'' }}" required>
+            <div class="form-text text-muted mb-3">Use letters only. Spaces, apostrophes, and hyphens are okay.</div>
 
             <input class="form-control mb-3" type="password" name="password" placeholder="Password" required>
 

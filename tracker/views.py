@@ -1,4 +1,5 @@
 from decimal import Decimal
+import re
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
@@ -12,7 +13,7 @@ from django.db.models.functions import TruncMonth
 import json
 
 from tracker.services.authz import get_group_for_user_or_404
-from tracker.services.balances import compute_net_balances
+from tracker.services.balances import compute_net_balances, simplify_debts
 from tracker.forms import GroupForm, ExpenseForm, SettlementForm, build_splits_for_expense
 from tracker.services.authz import get_expense_for_user_or_404
 
@@ -67,6 +68,13 @@ def _build_split_rows(*, members, posted_data=None, expense: Expense | None = No
     return rows
 
 
+NAME_PATTERN = re.compile(r"^[A-Za-z]+(?:[ '-][A-Za-z]+)*$")
+
+
+def _normalize_name(raw_name: str) -> str:
+    return " ".join(raw_name.split())
+
+
 @login_required
 def groups_list(request):
     groups = Group.objects.filter(members=request.user).order_by("name")
@@ -79,25 +87,32 @@ def signup(request):
         return redirect("groups_list")
 
     if request.method == "POST":
-        username = (request.POST.get("username") or "").strip()
+        username = _normalize_name(request.POST.get("username") or "")
         password = request.POST.get("password") or ""
 
         if not username:
-            messages.error(request, "Please enter a username.")
+            messages.error(request, "Please enter your name.")
+            return render(request, "tracker/signup.html", {"entered_username": username})
+
+        if not NAME_PATTERN.fullmatch(username):
+            messages.error(
+                request,
+                "Use a real name with letters only. Spaces, apostrophes, and hyphens are allowed.",
+            )
             return render(request, "tracker/signup.html", {"entered_username": username})
 
         if len(password) < 6:
             messages.error(request, "Password must be at least 6 characters long.")
             return render(request, "tracker/signup.html", {"entered_username": username})
 
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Username already exists. Please choose another one.")
+        if User.objects.filter(username__iexact=username).exists():
+            messages.error(request, "That name is already registered. Please choose another one.")
             return render(request, "tracker/signup.html", {"entered_username": username})
 
         try:
             User.objects.create_user(username=username, password=password)
         except IntegrityError:
-            messages.error(request, "Username already exists. Please choose another one.")
+            messages.error(request, "That name is already registered. Please choose another one.")
             return render(request, "tracker/signup.html", {"entered_username": username})
 
         messages.success(request, "Account created successfully. Please log in.")
@@ -111,10 +126,11 @@ def login_view(request):
         return redirect("groups_list")
 
     if request.method == "POST":
-        username = (request.POST.get("username") or "").strip()
+        username = _normalize_name(request.POST.get("username") or "")
         password = request.POST.get("password") or ""
+        matched_user = User.objects.filter(username__iexact=username).first()
         user = authenticate(
-            username=username,
+            username=matched_user.username if matched_user else username,
             password=password
         )
 
@@ -168,6 +184,7 @@ def group_dashboard(request, group_id: int):
     )
 
     net_by_user = compute_net_balances(group=group)
+    simplified_settlements = simplify_debts(group)
     category_data = (
         group_expenses.values("category__name")
         .annotate(total=Sum("amount"))
@@ -198,6 +215,18 @@ def group_dashboard(request, group_id: int):
         {"username": user.username, "amount": amount}
         for user, amount in sorted(net_by_user.items(), key=lambda item: item[0].username.lower())
     ]
+    receivable_rows = [
+        {"from_user": settlement["from"], "amount": settlement["amount"]}
+        for settlement in simplified_settlements
+        if settlement["to"] == request.user
+    ]
+    payable_rows = [
+        {"to_user": settlement["to"], "amount": settlement["amount"]}
+        for settlement in simplified_settlements
+        if settlement["from"] == request.user
+    ]
+    total_receivable = sum((item["amount"] for item in receivable_rows), Decimal("0.00"))
+    total_payable = sum((item["amount"] for item in payable_rows), Decimal("0.00"))
 
     return render(
         request,
@@ -207,6 +236,10 @@ def group_dashboard(request, group_id: int):
             "groups": Group.objects.filter(members=request.user).order_by("name"),
             "expenses": expenses,
             "settlements": settlements,
+            "receivable_rows": receivable_rows,
+            "payable_rows": payable_rows,
+            "total_receivable": total_receivable,
+            "total_payable": total_payable,
             "balance_rows": balance_rows,
             "labels": json.dumps(labels),
             "values": json.dumps(values),

@@ -7,7 +7,7 @@ from django.core.management import call_command
 from django.test import Client, TestCase
 
 from tracker.models import Category, Expense, Group, Settlement, Split
-from tracker.services.balances import compute_net_balances
+from tracker.services.balances import compute_net_balances, simplify_debts
 
 
 class AuthzTests(TestCase):
@@ -49,6 +49,55 @@ class BalanceTests(TestCase):
         self.assertEqual(net[self.alice], Decimal("30.00"))
         self.assertEqual(net[self.bob], Decimal("-30.00"))
 
+    def test_simplify_debts_returns_single_settlement_for_two_users(self):
+        ex = Expense.objects.create(group=self.group, description="Dinner", amount=Decimal("100.00"), payer=self.alice)
+        Split.objects.create(expense=ex, user=self.alice, amount=Decimal("50.00"))
+        Split.objects.create(expense=ex, user=self.bob, amount=Decimal("50.00"))
+
+        settlements = simplify_debts(self.group)
+
+        self.assertEqual(len(settlements), 1)
+        self.assertEqual(settlements[0]["from"], self.bob)
+        self.assertEqual(settlements[0]["to"], self.alice)
+        self.assertEqual(settlements[0]["amount"], Decimal("50.00"))
+
+    def test_simplify_debts_greedily_reduces_transactions(self):
+        carol = User.objects.create_user("carol", password="pass1234")
+        self.group.members.add(carol)
+
+        hotel = Expense.objects.create(group=self.group, description="Hotel", amount=Decimal("150.00"), payer=self.alice)
+        Split.objects.create(expense=hotel, user=self.alice, amount=Decimal("50.00"))
+        Split.objects.create(expense=hotel, user=self.bob, amount=Decimal("50.00"))
+        Split.objects.create(expense=hotel, user=carol, amount=Decimal("50.00"))
+
+        cab = Expense.objects.create(group=self.group, description="Cab", amount=Decimal("90.00"), payer=carol)
+        Split.objects.create(expense=cab, user=self.alice, amount=Decimal("30.00"))
+        Split.objects.create(expense=cab, user=self.bob, amount=Decimal("30.00"))
+        Split.objects.create(expense=cab, user=carol, amount=Decimal("30.00"))
+
+        settlements = simplify_debts(self.group)
+
+        self.assertEqual(len(settlements), 2)
+        self.assertEqual(settlements[0]["from"], self.bob)
+        self.assertEqual(settlements[0]["to"], self.alice)
+        self.assertEqual(settlements[0]["amount"], Decimal("70.00"))
+        self.assertEqual(settlements[1]["from"], self.bob)
+        self.assertEqual(settlements[1]["to"], carol)
+        self.assertEqual(settlements[1]["amount"], Decimal("10.00"))
+
+    def test_simplify_debts_returns_empty_list_when_balances_are_even(self):
+        ex = Expense.objects.create(group=self.group, description="Dinner", amount=Decimal("100.00"), payer=self.alice)
+        Split.objects.create(expense=ex, user=self.alice, amount=Decimal("50.00"))
+        Split.objects.create(expense=ex, user=self.bob, amount=Decimal("50.00"))
+
+        refund = Expense.objects.create(group=self.group, description="Movie", amount=Decimal("100.00"), payer=self.bob)
+        Split.objects.create(expense=refund, user=self.alice, amount=Decimal("50.00"))
+        Split.objects.create(expense=refund, user=self.bob, amount=Decimal("50.00"))
+
+        settlements = simplify_debts(self.group)
+
+        self.assertEqual(settlements, [])
+
 
 class SignupTests(TestCase):
     def setUp(self):
@@ -63,8 +112,19 @@ class SignupTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Username already exists")
+        self.assertContains(response, "That name is already registered")
         self.assertEqual(User.objects.filter(username="alice").count(), 1)
+
+    def test_signup_rejects_non_name_usernames(self):
+        response = self.client.post(
+            "/signup/",
+            {"username": "alice123", "password": "pass1234"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Use a real name with letters only")
+        self.assertFalse(User.objects.filter(username="alice123").exists())
 
 
 class DashboardTests(TestCase):
@@ -101,6 +161,27 @@ class DashboardTests(TestCase):
         self.assertContains(response, "categoryPieChart")
         self.assertContains(response, '"Food"', html=False)
         self.assertContains(response, "450.0", html=False)
+
+    def test_dashboard_shows_personal_settlement_plan(self):
+        carol = User.objects.create_user("carol", password="pass1234")
+        self.group.members.add(carol)
+
+        expense = Expense.objects.create(
+            group=self.group,
+            description="Trip hotel",
+            amount=Decimal("150.00"),
+            payer=self.alice,
+        )
+        Split.objects.create(expense=expense, user=self.alice, amount=Decimal("50.00"))
+        Split.objects.create(expense=expense, user=self.bob, amount=Decimal("50.00"))
+        Split.objects.create(expense=expense, user=carol, amount=Decimal("50.00"))
+
+        response = self.client.get(f"/groups/{self.group.id}/")
+
+        self.assertContains(response, "Your Settlement Plan")
+        self.assertContains(response, "From bob")
+        self.assertContains(response, "From carol")
+        self.assertContains(response, "Rs 100.00")
 
     def test_expense_edit_prefills_existing_split_values(self):
         category = Category.objects.create(name="Travel")

@@ -138,6 +138,45 @@
     </div>
     <div class="col-lg-6">
         <div class="tracker-card mb-3">
+            <h5>Your Settlement Plan</h5>
+            <div class="small text-muted mb-3">What {{ request.user.username }} should receive and pay right now.</div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 rounded border h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold text-success">You should receive</span>
+                            <span class="fw-semibold text-success">Rs {{ total_receivable }}</span>
+                        </div>
+                        {% for entry in receivable_rows %}
+                            <div class="d-flex justify-content-between py-1">
+                                <div>From {{ entry.from_user.username }}</div>
+                                <div class="fw-semibold">Rs {{ entry.amount }}</div>
+                            </div>
+                        {% empty %}
+                            <div class="text-muted">Nobody owes you anything right now.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded border h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold text-danger">You should pay</span>
+                            <span class="fw-semibold text-danger">Rs {{ total_payable }}</span>
+                        </div>
+                        {% for entry in payable_rows %}
+                            <div class="d-flex justify-content-between py-1">
+                                <div>To {{ entry.to_user.username }}</div>
+                                <div class="fw-semibold">Rs {{ entry.amount }}</div>
+                            </div>
+                        {% empty %}
+                            <div class="text-muted">You are all settled up.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tracker-card mb-3">
             <h5>Balances</h5>
             {% for entry in balance_rows %}
                 <div class="d-flex justify-content-between py-1">
